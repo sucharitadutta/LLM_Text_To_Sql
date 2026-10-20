@@ -1,0 +1,46 @@
+# Governed context the model is allowed to use. Edit this, not the code.
+project: my-project
+dialect: bigquery
+
+tables:
+  - name: my-project.marketing_mart.fct_marketing_daily
+    description: Daily paid-media performance. One row per date x channel x campaign.
+    partition_column: date
+    columns:
+      - {name: date,        type: DATE,    description: "Activity date (UTC). Partition column."}
+      - {name: channel,     type: STRING,  description: "Standard channel: Paid Search, Paid Social, Display, Email"}
+      - {name: campaign_id, type: STRING,  description: "FK to dim_campaign"}
+      - {name: spend,       type: NUMERIC, description: "Ad spend in USD"}
+      - {name: impressions, type: INT64,   description: "Ad impressions"}
+      - {name: clicks,      type: INT64,   description: "Ad clicks"}
+      - {name: conversions, type: INT64,   description: "Attributed conversions (last-click, 7-day window)"}
+      - {name: revenue,     type: NUMERIC, description: "Net revenue in USD, excludes refunds and tax"}
+
+  - name: my-project.marketing_mart.dim_campaign
+    description: One row per campaign. Join to facts on campaign_id.
+    columns:
+      - {name: campaign_id,   type: STRING, description: "Primary key"}
+      - {name: campaign_name, type: STRING, description: "Human-readable campaign name"}
+      - {name: objective,     type: STRING, description: "Awareness, Traffic, Conversion"}
+
+# Certified metric formulas. The model must use these exactly.
+metrics:
+  - {name: roas, description: "Return on ad spend",       sql: "SUM(revenue) / NULLIF(SUM(spend), 0)"}
+  - {name: ctr,  description: "Click-through rate",       sql: "SUM(clicks) / NULLIF(SUM(impressions), 0)"}
+  - {name: cpc,  description: "Cost per click",           sql: "SUM(spend) / NULLIF(SUM(clicks), 0)"}
+  - {name: cac,  description: "Cost per acquisition",     sql: "SUM(spend) / NULLIF(SUM(conversions), 0)"}
+
+rules:
+  - "Default date range is the last 30 complete days if the user gives none; state this as an assumption."
+  - "Use CURRENT_DATE('UTC') for relative dates. Never hardcode today's date."
+  - "Compute ratios as SUM(numerator)/SUM(denominator) over the grouped rows, never AVG of row-level ratios."
+  - "Aggregate fact tables before joining to dimensions to avoid fan-out."
+
+examples:
+  - question: "ROAS by channel for the last 30 days"
+    sql: |
+      SELECT channel, SUM(revenue) / NULLIF(SUM(spend), 0) AS roas
+      FROM `my-project.marketing_mart.fct_marketing_daily`
+      WHERE date >= DATE_SUB(CURRENT_DATE('UTC'), INTERVAL 30 DAY)
+      GROUP BY channel
+      ORDER BY roas DESC

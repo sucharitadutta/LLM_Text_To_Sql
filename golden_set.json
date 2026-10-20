@@ -1,0 +1,10 @@
+[
+  {
+    "question": "ROAS by channel for the last 30 days",
+    "reference_sql": "SELECT channel, SUM(revenue)/NULLIF(SUM(spend),0) AS roas FROM `my-project.marketing_mart.fct_marketing_daily` WHERE date >= DATE_SUB(CURRENT_DATE('UTC'), INTERVAL 30 DAY) GROUP BY channel"
+  },
+  {
+    "question": "Total spend per channel in September 2026",
+    "reference_sql": "SELECT channel, SUM(spend) AS spend FROM `my-project.marketing_mart.fct_marketing_daily` WHERE date BETWEEN '2026-09-01' AND '2026-09-30' GROUP BY channel"
+  }
+]

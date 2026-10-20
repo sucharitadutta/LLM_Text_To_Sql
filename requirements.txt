@@ -1,0 +1,7 @@
+anthropic>=0.40
+google-cloud-bigquery>=3.25
+db-dtypes>=1.2
+pandas>=2.0
+sqlglot>=25.0
+pyyaml>=6.0
+streamlit>=1.38
